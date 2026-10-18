@@ -167,8 +167,8 @@ No build step is required for a redirect-only project. You only need Git, and op
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR-GITHUB-USERNAME/YOUR-REPO-NAME.git
-cd YOUR-REPO-NAME
+git clone https://github.com/sharik38kh-sudo/srkworks.git
+cd srkworks
 ```
 
 ### 2. (Optional) Run Vercel locally
