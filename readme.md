@@ -154,6 +154,7 @@ If the catch-all rule is placed first, any rule below it will never run.
 ```text
 .
 ├── .gitignore      # Git ignore rules for Vercel and system artifacts
+├── index.html      # Static fallback and client-side redirect handler
 ├── readme.md       # Documentation and operational guide
 └── vercel.json     # Redirect configuration (core of this repository)
 ```

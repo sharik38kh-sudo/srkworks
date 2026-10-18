@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/",
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/",
+      "permanent": false
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "https://srkworks.dev-sharikhan.workers.dev/sitemap.xml",
       "permanent": false
