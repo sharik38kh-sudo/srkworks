@@ -1,20 +1,8 @@
-<!--
-TODO for the maintainer / AI assistant updating this file:
-This README was written WITHOUT access to the repository's files. Before publishing, verify every
-item marked [VERIFY] or written as a YOUR-... placeholder against the real repo:
-  - the Cloudflare domain (replace YOUR-CLOUDFLARE-DOMAIN everywhere)
-  - the Vercel domain(s) (replace YOUR-PROJECT.vercel.app / YOUR-VERCEL-DOMAIN)
-  - the actual contents of vercel.json (the example below is a reference, not a copy)
-  - the file/folder list in "Repository Structure"
-  - any package.json scripts (none are assumed here)
-Delete this comment once everything is verified.
--->
-
 # SRKWorks — Vercel Redirect Layer
 
-This repository is a **redirect-only deployment** for SRKWorks. It is hosted on [Vercel](https://vercel.com) and forwards every incoming request to the matching URL on the main SRKWorks website, which is hosted on **Cloudflare Pages**.
+This repository is a **redirect-only deployment** for SRKWorks. It is hosted on [Vercel](https://vercel.com) and forwards every incoming request to the matching URL on the main SRKWorks website, which is hosted on **Cloudflare Workers**.
 
-> **The Cloudflare Pages site is the source of truth.** All website content, pages, and indexed URLs live there. This repository contains no website content of its own.
+> **The Cloudflare site is the source of truth.** All website content, pages, and indexed URLs live there. This repository contains no website content of its own.
 
 ---
 
@@ -38,10 +26,11 @@ This repository is a **redirect-only deployment** for SRKWorks. It is hosted on 
 | Item | Value |
 |---|---|
 | Project name | SRKWorks |
-| Purpose | Forward Vercel traffic to the main Cloudflare Pages website |
-| Main website (source of truth) | `https://YOUR-CLOUDFLARE-DOMAIN` |
+| Purpose | Forward Vercel traffic to the main Cloudflare website |
+| Main website (source of truth) | `https://srkworks.dev-sharikhan.workers.dev` |
+| Sitemap | `https://srkworks.dev-sharikhan.workers.dev/sitemap.xml` |
 | Vercel deployment | `https://YOUR-PROJECT.vercel.app` (and any custom domain attached to it) |
-| Redirect type | Permanent (HTTP 308) unless configured otherwise |
+| Redirect type | Permanent (HTTP 308) or Temporary (HTTP 307 for testing) |
 
 ### What this repository does
 
@@ -83,34 +72,43 @@ Vercel reads the `redirects` array in `vercel.json` and evaluates rules **in ord
 
 ```text
 Visitor → https://YOUR-PROJECT.vercel.app/products/example?color=blue
-        → Vercel responds: 308, Location: https://YOUR-CLOUDFLARE-DOMAIN/products/example?color=blue
+        → Vercel responds: 307/308, Location: https://srkworks.dev-sharikhan.workers.dev/products/example?color=blue
         → Browser requests the Cloudflare URL
-        → Cloudflare Pages serves the page
+        → Cloudflare serves the page
 ```
 
 ### Examples
 
 | Visitor opens (Vercel) | Redirected to (Cloudflare) |
 |---|---|
-| `https://YOUR-PROJECT.vercel.app/` | `https://YOUR-CLOUDFLARE-DOMAIN/` |
-| `https://YOUR-PROJECT.vercel.app/products/example-product` | `https://YOUR-CLOUDFLARE-DOMAIN/products/example-product` |
-| `https://YOUR-PROJECT.vercel.app/store/example-store` | `https://YOUR-CLOUDFLARE-DOMAIN/store/example-store` |
-| `https://YOUR-PROJECT.vercel.app/services/example-service` | `https://YOUR-CLOUDFLARE-DOMAIN/services/example-service` |
-| `https://YOUR-PROJECT.vercel.app/search?q=test` | `https://YOUR-CLOUDFLARE-DOMAIN/search?q=test` |
+| `https://YOUR-PROJECT.vercel.app/` | `https://srkworks.dev-sharikhan.workers.dev/` |
+| `https://YOUR-PROJECT.vercel.app/sitemap.xml` | `https://srkworks.dev-sharikhan.workers.dev/sitemap.xml` |
+| `https://YOUR-PROJECT.vercel.app/robots.txt` | `https://srkworks.dev-sharikhan.workers.dev/robots.txt` |
+| `https://YOUR-PROJECT.vercel.app/products/example-product` | `https://srkworks.dev-sharikhan.workers.dev/products/example-product` |
+| `https://YOUR-PROJECT.vercel.app/search?q=test` | `https://srkworks.dev-sharikhan.workers.dev/search?q=test` |
 
-> The paths above (`/products/`, `/store/`, `/services/`) are illustrative. Use the real paths from your Cloudflare site. **[VERIFY]**
+### Actual Configuration (`vercel.json`)
 
-### Reference configuration
-
-The following shows the standard pattern for a "forward everything" setup. **Compare it with the actual `vercel.json` in this repository; do not assume they are identical. [VERIFY]**
+The redirect layer is configured in `vercel.json`:
 
 ```json
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "redirects": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/sitemap.xml",
+      "permanent": false
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/robots.txt",
+      "permanent": false
+    },
+    {
       "source": "/:path*",
-      "destination": "https://YOUR-CLOUDFLARE-DOMAIN/:path*",
-      "permanent": true
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/:path*",
+      "permanent": false
     }
   ]
 }
@@ -124,30 +122,30 @@ What each field means:
 | `destination` | Where to send the visitor. `:path*` re-inserts the matched path. |
 | `permanent` | `true` sends HTTP 308 (permanent). `false` sends HTTP 307 (temporary). |
 
-> Use `"permanent": false` while testing, so browsers and search engines do not cache the redirect. Switch to `true` once everything works.
+> Note: Use `"permanent": false` during initial deployment so browsers and crawlers don't cache redirects while testing. Change to `"permanent": true` when ready for full production.
 
 ### Special cases go first
 
-If a specific path must behave differently (for example, an old URL that maps to a new one), add that rule **above** the catch-all rule:
+If a specific path must behave differently (for example, a dedicated legacy URL or custom mapping), add that rule **above** the catch-all rule:
 
 ```json
 {
   "redirects": [
     {
-      "source": "/old-products/:slug",
-      "destination": "https://YOUR-CLOUDFLARE-DOMAIN/products/:slug",
-      "permanent": true
+      "source": "/legacy-page",
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/new-page",
+      "permanent": false
     },
     {
       "source": "/:path*",
-      "destination": "https://YOUR-CLOUDFLARE-DOMAIN/:path*",
-      "permanent": true
+      "destination": "https://srkworks.dev-sharikhan.workers.dev/:path*",
+      "permanent": false
     }
   ]
 }
 ```
 
-If the catch-all rule is placed first, the specific rule will never run.
+If the catch-all rule is placed first, any rule below it will never run.
 
 ---
 
@@ -267,8 +265,8 @@ curl -I "https://YOUR-PROJECT.vercel.app/search?q=test&page=2"
 A correct response looks like this:
 
 ```text
-HTTP/2 308
-location: https://YOUR-CLOUDFLARE-DOMAIN/products/example-product
+HTTP/2 307
+location: https://srkworks.dev-sharikhan.workers.dev/products/example-product
 ```
 
 To follow the redirect and confirm the final page loads:
@@ -283,8 +281,9 @@ The last response should be `HTTP/2 200` from the Cloudflare domain.
 
 | Test | Command | Expected result |
 |---|---|---|
-| Homepage | `curl -I https://YOUR-PROJECT.vercel.app/` | `308` → `https://YOUR-CLOUDFLARE-DOMAIN/` |
-| Nested path | `curl -I https://YOUR-PROJECT.vercel.app/products/example` | `308` → same path on Cloudflare |
+| Homepage | `curl -I https://YOUR-PROJECT.vercel.app/` | `307` / `308` → `https://srkworks.dev-sharikhan.workers.dev/` |
+| Sitemap | `curl -I https://YOUR-PROJECT.vercel.app/sitemap.xml` | `307` / `308` → `https://srkworks.dev-sharikhan.workers.dev/sitemap.xml` |
+| Nested path | `curl -I https://YOUR-PROJECT.vercel.app/products/example` | `307` / `308` → same path on Cloudflare |
 | Query string | `curl -I "https://YOUR-PROJECT.vercel.app/?a=1&b=2"` | `Location` contains `?a=1&b=2` |
 | Final page | `curl -IL https://YOUR-PROJECT.vercel.app/` | Ends with `200` |
 | Loop check | `curl -IL --max-redirs 5 https://YOUR-PROJECT.vercel.app/` | Finishes before 5 redirects |
@@ -302,24 +301,24 @@ The goal is for search engines to index **only the Cloudflare site** and treat t
 - Every page on the Cloudflare site should include a canonical tag pointing to its own Cloudflare URL:
 
   ```html
-  <link rel="canonical" href="https://YOUR-CLOUDFLARE-DOMAIN/products/example-product" />
+  <link rel="canonical" href="https://srkworks.dev-sharikhan.workers.dev/products/example-product" />
   ```
 
 - This repository does not serve HTML pages, so canonical tags are managed in the Cloudflare site's repository.
 
 ### `sitemap.xml`
 
-- Keep `sitemap.xml` on the Cloudflare site only: `https://YOUR-CLOUDFLARE-DOMAIN/sitemap.xml`.
+- Keep `sitemap.xml` on the Cloudflare site: `https://srkworks.dev-sharikhan.workers.dev/sitemap.xml`.
 - All URLs inside it must use the Cloudflare domain, never the Vercel domain.
-- This repository does not need its own sitemap. Adding one would risk telling Google to index the redirecting URLs.
+- The Vercel redirect layer explicitly routes `/sitemap.xml` to `https://srkworks.dev-sharikhan.workers.dev/sitemap.xml`.
 
 ### `robots.txt`
 
-- Keep `robots.txt` on the Cloudflare site: `https://YOUR-CLOUDFLARE-DOMAIN/robots.txt`.
+- Keep `robots.txt` on the Cloudflare site: `https://srkworks.dev-sharikhan.workers.dev/robots.txt`.
 - Reference the Cloudflare sitemap inside it:
 
   ```text
-  Sitemap: https://YOUR-CLOUDFLARE-DOMAIN/sitemap.xml
+  Sitemap: https://srkworks.dev-sharikhan.workers.dev/sitemap.xml
   ```
 
 - Do not block the Vercel domain in a way that stops crawlers from reading the redirect. Crawlers need to follow the redirect to discover the final URL.
@@ -364,7 +363,7 @@ This project uses **redirects**, so the visitor lands on the Cloudflare URL. A *
 1. Confirm `vercel.json` is in the **root** of the repository (not in a subfolder), unless the project's Root Directory setting says otherwise. **[VERIFY]**
 2. Check the build logs in Vercel for configuration errors.
 3. Confirm the deployed branch is the branch containing your latest `vercel.json`.
-4. If the 404 happens **after** the redirect, the page does not exist on Cloudflare. Open `https://YOUR-CLOUDFLARE-DOMAIN/the/same/path` directly to confirm.
+4. If the 404 happens **after** the redirect, the page does not exist on Cloudflare. Open `https://srkworks.dev-sharikhan.workers.dev/the/same/path` directly to confirm.
 
 ### Redirect loops
 
